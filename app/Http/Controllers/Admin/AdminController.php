@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Shop\BaseController;
+
 use App\Models\Admin;
 use Illuminate\Auth\Authenticatable;
 //use App\Models\ShopCategory;

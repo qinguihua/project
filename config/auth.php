@@ -40,7 +40,7 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-
+       //设置保安
         'admin' => [
             'driver' => 'session',
             'provider' => 'admins',

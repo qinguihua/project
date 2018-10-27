@@ -1043,8 +1043,1118 @@ class ShopInformationController extends Controller
     }
 ```
 
+## Day02
+
+### 开发任务
+
+- 完善day1的功能，要用事务保证同时删除用户和店铺，删除图片
+- 平台：平台管理员账号管理
+- 平台：管理员登录和注销功能，修改个人密码(参考微信修改密码功能)
+- 平台：商户账号管理，重置商户密码
+- 商户端：商户登录和注销功能，修改个人密码
+- 修改个人密码需要用到验证密码功能,[参考文档](https://laravel-china.org/docs/laravel/5.5/hashing)
+- 商户登录正常登录，登录之后判断店铺状态是否为1，不为1不能做任何操作
+
+### 实现步骤
+
+1. 在商户端口和平台端都要创建BaseController 以后都要继承自己的BaseController
+
+2. 商户的登录和以前一样
+
+3. 平台的登录，模型中必需继承 use Illuminate\Foundation\Auth\User as Authenticatable
+
+4. 设置配置文件config/auth.php
+
+   ## 同时删除用户和店铺
+
+   ### 控制器
+
+   ```php
+    //删除
+       public function del($id){
+   
+           $information=ShopInformation::findOrFail($id);
+   
+           if($information->delete()){
+               //跳转
+               return redirect()->route("shop.information.index")->with("success","删除成功");
+           }
+   
+       }
+   
+   ```
+
+   ### 视图
+
+   ```html
+   @extends("admin.layouts.main")
+   @section("title","店铺信息")
+   @section("content")
+   
+   <a href="{{route("shop.information.add")}}" class="btn btn-info">添加</a>
+       <table class="table table-hover">
+           <tr>
+               <th>id</th>
+               <th>分类</th>
+               <th>名称</th>
+               <th>图片</th>
+               {{--<th>评分</th>--}}
+               <th>是否品牌</th>
+               {{--<th>准时送达</th>--}}
+               <th>是否蜂鸟配送</th>
+               {{--<th>保标记</th>--}}
+               {{--<th>票标记</th>--}}
+               {{--<th>准标记</th>--}}
+               <th>起送金额</th>
+               <th>配送费</th>
+               <th>店公告</th>
+               <th>优惠信息</th>
+               <th>商家</th>
+               <th>操作</th>
+           </tr>
+           @foreach($informations as $information)
+           <tr>
+               <td>{{$information->id}}</td>
+               <td>{{$information->category->name}}</td>
+               <td>{{$information->shop_name}}</td>
+               <td><img src="/{{$information->shop_img}}" alt="" width="100px"></td>
+               {{--<td>{{$information->shop_rating}}</td>--}}
+               <td>{{$information->brand}}</td>
+               {{--<td>{{$information->on_time}}</td>--}}
+               <td>{{$information->fengniao}}</td>
+               {{--<td>{{$information->bao}}</td>--}}
+               {{--<td>{{$information->piao}}</td>--}}
+               {{--<td>{{$information->zhun}}</td>--}}
+               <td>{{$information->start_send}}</td>
+               <td>{{$information->send_cost}}</td>
+               <td>{{$information->notice}}</td>
+               <td>{{$information->discount}}</td>
+               <td>{{$information->user->name}}</td>
+               <td>
+                   @if($information->status===0)
+                   <a href="{{route("shop.information.check",$information->id)}}" class="btn btn-success">审核</a>
+                   @endif
+                   <a href="{{route("shop.information.del",$information->id)}}" class="btn btn-danger" onclick="return confirm('删除会一并删除用户,确认吗？')">删除</a>
+               </td>
+           </tr>
+          @endforeach
+       </table>
+   
+   @endsection
+   ```
+
+   ### 完善登录和修改个人密码
+
+   ```php
+   <?php
+   
+   namespace App\Http\Controllers\Shop;
+   
+   use App\Models\User;
+   use Illuminate\Http\Request;
+   use App\Http\Controllers\Controller;
+   use Illuminate\Support\Facades\Auth;
+   use Illuminate\Support\Facades\Hash;
+   
+   class RegController extends BaseController
+   {
+       //
+       public function reg(Request $request){
+           //判断提交方式
+           if ($request->isMethod("post")){
+               //验证
+               $this->validate($request, [
+                   "name" => "required|unique:users",
+                   "password" => "required|min:6",
+                   "captcha" => "required|captcha"
+                     ],[
+                   "captcha.required" => '验证码不能为空',
+                   "captcha.captcha" => '验证码有误',
+               ]);
+               //接收数据
+               $data=$request->post();
+               //密码加密
+               $data['password'] = bcrypt($data['password']);
+               //添加
+               if (User::create($data)){
+                   //跳转
+                   return redirect()->route("shop.user.login")->with("success","注册成功");
+               }
+   
+           }else{
+               //显示视图
+               return view("shop.user.reg");
+           }
+       }
+   
+       //登录
+   
+           public function login(Request $request){
+               //判断提交方式
+               if ($request->isMethod("post")){
+                   //验证
+                   $data=$this->validate($request, [
+                       "name" => "required",
+                       "password" => "required"
+                   ]);
+                   //验证账号和密码是否正确
+                   if(Auth::attempt($data,$request->has("remeber"))){
+   
+                       //当前登录用户的id
+                       $user=Auth::user();
+                       $shop=$user->information;
+                       //通过用户找到店铺
+                       if ($shop){
+                           //如果有店铺
+                           switch ($shop->status){
+                               //禁用
+                               case -1:
+                                   Auth::logout();
+                                   return back()->withInput()->with("danger","店铺已被禁用！");
+                                   break;
+                               //未审核
+                               case 0:
+                                   Auth::logout();
+                                   return back()->withInput()->with("danger","店铺等待审核中!");
+                                   break;
+                           }
+                       }
+   
+                       //登录成功
+                       if (Auth::user()->information==null) {
+                           return redirect()->intended(route("shop.information.add"))->with("success","登录成功,欢迎申请店铺");
+                       }else{
+                           return redirect()->intended(route("shop.user.index"))->with("success","登录成功");
+                       }
+   
+                   }else{
+                       //登录失败
+                       return redirect()->back()->withInput()->with("danger","账号或密码错误");
+                   }
+               }else{
+                   //显示视图
+                   return view("shop.user.login");
+               }
+       }
+   
+   
+       //更改密码
+       public function change_pwd(Request $request){
+   
+           //得到当前用户
+           $user=Auth::guard("web")->user();
+   
+   //        dd($user);
+           //判断提交方式
+           if ($request->isMethod("post")){
+   
+               //验证
+               $this->validate($request,[
+                   "old_password"=>"required",
+                   "password"=>"required|confirmed"
+               ]);
+   
+   
+               $oldpassword=$request->post("old_password");
+               //判断旧密码是否正确
+               if(Hash::check($oldpassword,$user->password)){
+                   //设置新密码
+                   $user->password=Hash::make($request->post("password"));
+   //                $user->password=Hash::make($request->post("password"));
+                   //保存修改
+                   $user->save();
+                   //跳转
+                   return redirect()->route("admin.admin.index")->with("success","修改成功");
+               }
+               //旧密码不正确
+               return back()->with("danger", "旧密码不正确");
+   
+           }else{
+   
+               //显示视图
+               return view("shop.user.change_pwd",compact("user"));
+   
+           }
+       }
+   
+   
+       //注销
+       public function logout(){
+           Auth::guard("web")->logout();
+           //跳转
+           return redirect()->route("shop.user.login")->with("success","退出成功");
+       }
+   
+   
+       //后台首页
+       public function index(){
+   //        if (Auth::user()->information===null) {
+   ////            return redirect()->route("shop.information.add")->with("danger","你还没有商铺呢！快点加入我们吧！！");
+   ////        }
+           //显示视图
+           return view("shop.user.index");
+   
+       }
+   
+   
+   
+   }
+   
+   ```
+
+   ```html
+   @extends("shop.layouts.main")
+   @section("title","修改密码")
+   @section("content")
+   
+   
+   
+       <form method="post"  class="table table-striped">
+           {{ csrf_field() }}
+           <div class="form-group">
+               <label>用户名</label>
+               <input class="form-control" type="text"  name="name" value="{{$user->name}}" readonly>
+           </div>
+           <div class="form-group">
+               <label>原密码</label>
+               <input type="password" class="form-control" name="old_password">
+           </div>
+           <div class="form-group">
+               <label>新密码</label>
+               <input type="password" class="form-control" name="password">
+           </div>
+           <div class="form-group">
+               <label>确认密码</label>
+               <input type="password" class="form-control" name="password_confirmation">
+           </div>
+           <button type="submit" class="btn btn-default">修改</button>
+       </form>
+   @endsection
+   ```
+
+   ### 导航条
+
+   ```php
+   <nav class="navbar navbar-inverse">
+       <div class="container-fluid">
+           <!-- Brand and toggle get grouped for better mobile display -->
+           <div class="navbar-header">
+               <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                   <span class="sr-only">Toggle navigation</span>
+                   <span class="icon-bar"></span>
+                   <span class="icon-bar"></span>
+                   <span class="icon-bar"></span>
+               </button>
+               <a class="navbar-brand" href="#">ELE点餐系统</a>
+           </div>
+   
+           <!-- Collect the nav links, forms, and other content for toggling -->
+           <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+               <ul class="nav navbar-nav">
+                   <li class="active"><a href="{{route('shop.user.index')}}">首页<span class="sr-only">(current)</span></a></li>
+                   <li><a href="#">商家分类</a></li>
+                   <li><a href="#">商家信息</a></li>
+                   <li><a href="#">商家管理</a></li>
+                   <li><a href="#">管理员管理</a></li>
+               </ul>
+               <ul class="nav navbar-nav navbar-right">
+                   @auth("web")
+                       <li class="dropdown">
+                           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                               欢迎{{\Illuminate\Support\Facades\Auth::guard("web")->user()->name}} <span class="caret"></span></a>
+                           <ul class="dropdown-menu">
+                               <li><a href="{{route("shop.user.change_pwd")}}">修改密码</a></li>
+   
+                               <li role="separator" class="divider"></li>
+                               <li><a href="{{route("shop.user.logout")}}">注销</a></li>
+                           </ul>
+                       </li>
+                   @endauth
+                   @guest("web")
+                       <li><a href="{{route("shop.user.login")}}">登录</a></li>
+                   @endguest
+   
+               </ul>
+           </div><!-- /.navbar-collapse -->
+       </div><!-- /.container-fluid -->
+   </nav>
+   ```
+
+   ## DAY03
+
+   ### 开发任务
+
+   #### 商户端 
+
+   - 菜品分类管理 
+   - 菜品管理 
+
+   #### 要求
+
+   - 一个商户只能有且仅有一个默认菜品分类 
+   - 只能删除空菜品分类 
+   - 必须登录才能管理商户后台（使用中间件实现） 
+   - 可以按菜品分类显示该分类下的菜品列表 
+   - 可以根据条件（按菜品名称和价格区间）搜索菜品
+
+## 菜品分类的增删改查
+
+```php
+<?php
+
+namespace App\Http\Controllers\shop;
+
+use App\Models\Menu_category;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+
+class MenuCategoryController extends BaseController
+{
+    //
+    public function index(){
+
+        $menu_categorys=Menu_category::all();
+        //显示视图并传递数据
+        return view("shop.menu_category.index",compact("menu_categorys"));
+
+    }
+
+    public function add(Request $request){
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //验证
+            $this->validate($request,[
+                'name'=>'required|unique',
+                'description'=>'required',
+                'is_selected'=>'required',
+            ]);
+
+            //接收数据
+            $data=$request->post();
+            $shopId = Auth::user()->shop_information->id;
+            $shopId=$data["information_id"];
+            //判断
+            if($request->post("is_selected")){
+                //把所有的is_selected设置为0
+                Menu_category::where("is_selected",1)->where("information_id",$shopId)->update(["is_selected"=>0]);
+            }
+            //数据入库
+            if (Menu_category::create($data)){
+                //跳转
+                return redirect()->route("shop.menu_category.index")->with("success","添加成功");
+            }
+
+        }else{
+
+            //显示视图
+            return view("shop.menu_category.add");
+
+        }
+    }
+
+    //修改
+    public function edit(Request $request,$id){
+
+        //通过id得到对象
+        $menu_category=Menu_category::find($id);
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //接收数据
+            $data=$request->post();
+
+            if ($menu_category->update($data)){
+                return redirect()->route("shop.menu_category.index")->with("success","修改成功");
+            }
+
+        }else{
+            //显示视图并传数据
+            return view("shop.menu_category.edit",compact("menu_category"));
+        }
 
 
+    }
+
+
+    //删除
+    public function del($id){
+
+        $menu_category=Menu_category::find($id);
+
+        if ($menu_category->delete()){
+
+            return redirect()->route("shop.menu_category.index")->with("success","删除成功");
+        }
+
+    }
+
+}
+```
+
+### 视图
+
+```html
+@extends("shop.layouts.main")
+@section("title","菜品分类")
+@section("content")
+
+<a href="{{route("shop.menu_category.add")}}" class="btn btn-info">添加</a>
+    <table class="table table-hover">
+        <tr>
+            <th>id</th>
+            <th>名称</th>
+            <th>所属商家</th>
+            <th>简介</th>
+            <th>操作</th>
+        </tr>
+        @foreach($menu_categorys as $menu_category)
+        <tr>
+            <td>{{$menu_category->id}}</td>
+            <td>{{$menu_category->name}}</td>
+            <td>{{$menu_category->information_id}}</td>
+            <td>{{$menu_category->description}}</td>
+            <td>
+                <a href="{{route("shop.menu_category.edit",$menu_category->id)}}" class="btn btn-success">编辑</a>
+                <a href="{{route("shop.menu_category.del",$menu_category->id)}}" class="btn btn-danger">删除</a>
+            </td>
+        </tr>
+       @endforeach
+    </table>
+
+@endsection
+```
+
+### 菜品的增删改查
+
+```php
+<?php
+
+namespace App\Http\Controllers\shop;
+
+use App\Models\Menu;
+use App\Models\Menu_category;
+use App\Models\MenuCategory;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+
+class MenuController extends BaseController
+{
+    //
+    public function index(){
+
+        $menus=Menu::all();
+        //显示视图并传递数据
+        return view("shop.menu.index",compact("menus"));
+
+    }
+
+    public function add(Request $request){
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //接收数据
+            $data=$request->post();
+//            $shopId = Auth::user()->shop_information->id;
+            $shopId=$data["information_id"];
+
+            $data['status']=$request->has('status')?'1':'0';
+            //上传图片
+            $data['goods_img']=$request->file("goods_img")->store("images","image");
+            //数据入库
+            if (Menu::create($data)){
+                //跳转
+                return redirect()->route("shop.menu.index")->with("success","添加成功");
+            }
+
+        }else{
+            $results=MenuCategory::all();
+            //dd($results);
+            //显示视图
+            return view("shop.menu.add",compact("results"));
+
+        }
+    }
+
+    //修改
+    public function edit(Request $request,$id){
+
+        //通过id得到对象
+        $menu=Menu::find($id);
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //接收数据
+            $data=$request->post();
+            $data['status']=$request->has('status')?'1':'0';
+
+            //判断是否重新上传图片
+            if($request->file("goods_img")!==null){
+                $data['goods_img']=$request->file("goods_img")->store("images","image");
+            }else{
+                $data['goods_img']=$menu->goods_img;
+            }
+
+            if ($menu->update($data)){
+                return redirect()->route("shop.menu.index")->with("success","修改成功");
+            }
+
+        }else{
+            //显示视图并传数据
+            $results=MenuCategory::all();
+            return view("shop.menu.edit",compact("menu","results"));
+        }
+
+
+    }
+
+
+    //删除
+    public function del($id){
+
+        $menu=Menu::find($id);
+
+        if ($menu->delete()){
+
+            return redirect()->route("shop.menu.index")->with("success","删除成功");
+        }
+
+    }
+
+}
+
+```
+
+### 视图
+
+```html
+@extends("shop.layouts.main")
+@section("title","菜品分类")
+@section("content")
+
+<a href="{{route("shop.menu.add")}}" class="btn btn-info">添加</a>
+    <table class="table table-hover">
+        <tr>
+            <th>id</th>
+            <th>名称</th>
+            <th>所属商家</th>
+            <th>所属分类</th>
+            <th>价格</th>
+            <th>简介</th>
+            <th>月销量</th>
+            <th>商品图片</th>
+            <th>操作</th>
+        </tr>
+        @foreach($menus as $menu)
+        <tr>
+            <td>{{$menu->id}}</td>
+            <td>{{$menu->goods_name}}</td>
+            <td>{{$menu->shop_information->shop_name}}</td>
+            <td>{{$menu->menu_category->name}}</td>
+            <td>{{$menu->goods_price}}</td>
+            <td>{{$menu->description}}</td>
+            <td>{{$menu->month_sales}}</td>
+            <td><img src="/{{$menu->goods_img}}" alt="" width="100"></td>
+            <td>
+                <a href="{{route("shop.menu.edit",$menu->id)}}" class="btn btn-success">编辑</a>
+                <a href="{{route("shop.menu.del",$menu->id)}}" class="btn btn-danger">删除</a>
+            </td>
+        </tr>
+       @endforeach
+    </table>
+
+@endsection
+```
+
+### 不能删除有菜品的分类
+
+```php
+ //删除
+    public function del($id){
+
+
+        //得到当前分类
+        $cate=MenuCategory::findOrFail($id);
+        //得到当前分类对应的菜品数
+        $shopCount=Menu::where('category_id',$cate->id)->count();
+        //判断当前分类菜品数
+        if ($shopCount){
+            //回跳
+            return  back()->with("danger","当前分类下有菜品，不能删除");
+        }
+        //否则删除
+        $cate->delete();
+        //跳转
+        return redirect()->route('shop.menu_category.index')->with('success',"删除成功");
+    }
+```
+
+### 搜索并分页
+
+```php
+ public function index(Request $request){
+        
+        $url=$request->query();
+
+        // 接收数据
+        $categoryId = $request->get("category_id");
+        $goods_name=$request->get("goods_name");
+        $maxPrice=$request->get("maxPrice");
+        $minPrice=$request->get("minPrice");
+
+        //得到所有并分页
+        $query = Menu::orderBy("id");
+        if ($categoryId!==null) {
+            $query->where("category_id",$categoryId);
+        }
+
+        //按菜品名搜索
+        if ($goods_name!==null){
+
+            $query->where("title","like","%{$goods_name}%");
+        }
+        //按价格区间搜索
+        if ($maxPrice!=0 && $minPrice!=0){
+            $query->where("goods_price",">=","$minPrice");
+            $query->where("goods_price","<=","$maxPrice");
+        }
+
+        $menus=$query->paginate(2);
+
+
+        //显示视图并传递数据
+        $results=MenuCategory::all();
+        return view("shop.menu.index",compact("menus","results","url"));
+
+    }
+
+```
+
+### 视图
+
+```html
+@extends("shop.layouts.main")
+@section("title","菜品分类")
+@section("content")
+
+<div>
+
+    <a href="{{route("shop.menu.add")}}" class="btn btn-info">添加</a>
+
+    <form class="navbar-form navbar-right">
+        <div class="form-group">
+            <select name="category_id" class="form-control">
+                <option value="">请选择分类</option>
+                @foreach($results as $result)
+                    <option value="{{$result->id}}">{{$result->name}}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="exampleInputName2">价格</label>
+            <input type="text" class="form-control" id="exampleInputName2" placeholder="最高价" name="maxPrice">
+        </div>
+        <div class="form-group">
+            <label for="exampleInputEmail2">-</label>
+            <input type="text" class="form-control" id="exampleInputEmail2" placeholder="最低价" name="minPrice">
+        </div>
+        <div class="form-group">
+            <input type="text" class="form-control" id="exampleInputEmail2" placeholder="请输入菜品名称" name="goods_name">
+            <button type="submit" class="btn btn-default">搜索</button>
+        </div>
+    </form>
+
+</div>
+
+    <table class="table table-hover">
+        <tr>
+            <th>id</th>
+            <th>名称</th>
+            <th>所属商家</th>
+            <th>所属分类</th>
+            <th>价格</th>
+            <th>简介</th>
+            <th>月销量</th>
+            <th>商品图片</th>
+            <th>操作</th>
+        </tr>
+        @foreach($menus as $menu)
+        <tr>
+            <td>{{$menu->id}}</td>
+            <td>{{$menu->goods_name}}</td>
+            <td>{{$menu->shop_information->shop_name}}</td>
+            <td>{{$menu->menu_category->name}}</td>
+            <td>{{$menu->goods_price}}</td>
+            <td>{{$menu->description}}</td>
+            <td>{{$menu->month_sales}}</td>
+            <td><img src="/{{$menu->goods_img}}" alt="" width="100"></td>
+            <td>
+                <a href="{{route("shop.menu.edit",$menu->id)}}" class="btn btn-success">编辑</a>
+                <a href="{{route("shop.menu.del",$menu->id)}}" class="btn btn-danger">删除</a>
+            </td>
+        </tr>
+       @endforeach
+    </table>
+
+{{$menus->appends($url)->links()}}
+
+@endsection
+```
+
+### 根据菜品分类查看菜品
+
+```php
+//查看
+    public function check($id){
+
+        $lists = DB::table("menus")->where("category_id",$id)->get();
+
+//        $menu_categorys=MenuCategory::all();
+
+        return view("shop.menu_category.check",compact("lists"));
+
+    }
+
+```
+
+### 视图
+
+```html
+@extends("shop.layouts.main")
+@section("title","菜品分类")
+@section("content")
+
+    <table class="table table-hover">
+        <tr>
+            <th>名称</th>
+            <th>价格</th>
+            <th>简介</th>
+            <th>图片</th>
+        </tr>
+        @foreach($lists as $list)
+        <tr>
+            <td>{{$list->goods_name}}</td>
+            <td>{{$list->goods_price}}</td>
+            <td>{{$list->description}}</td>
+            <td><img src="/{{$list->goods_img}}" alt="" width="100"></td>
+
+        </tr>
+       @endforeach
+    </table>
+
+@endsection
+```
+
+### 商户登录权限
+
+```html
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>商户登录</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- HTML5 shim 和 Respond.js 是为了让 IE8 支持 HTML5 元素和媒体查询（media queries）功能 -->
+    <!-- 警告：通过 file:// 协议（就是直接将 html 页面拖拽到浏览器中）访问页面时 Respond.js 不起作用 -->
+    <!--[if lt IE 9]>
+    <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+
+
+<form class="form-horizontal" method="post">
+    @include("shop.layouts._error")
+    @include("shop.layouts._msg")
+
+    {{csrf_field()}}
+    <br><br><br><br>
+<div class="form-group">
+    <label for="inputEmail3" class="col-sm-2 control-label">用户名</label>
+    <div class="col-sm-10">
+        <input type="text" class="form-control" id="inputEmail3" placeholder="用户名" name="name">
+    </div>
+</div>
+<div class="form-group">
+    <label for="inputPassword3" class="col-sm-2 control-label">密码</label>
+    <div class="col-sm-10">
+        <input type="password" class="form-control" id="inputPassword3" placeholder="密码" name="password">
+    </div>
+</div>
+<div class="form-group">
+    <div class="col-sm-offset-2 col-sm-10">
+        <div class="checkbox">
+            <label>
+                <input type="checkbox">记住密码
+            </label>
+        </div>
+    </div>
+</div>
+<div class="form-group">
+    <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" class="btn btn-default">登录</button>
+    </div>
+</div>
+    </form>
+
+
+<!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+<!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
+</body>
+</html>
+```
+
+### 异常处理
+
+```php
+<?php
+
+namespace App\Exceptions;
+
+use Exception;
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+
+class Handler extends ExceptionHandler
+{
+    /**
+     * A list of the exception types that are not reported.
+     *
+     * @var array
+     */
+    protected $dontReport = [
+        //
+    ];
+
+    /**
+     * A list of the inputs that are never flashed for validation exceptions.
+     *
+     * @var array
+     */
+    protected $dontFlash = [
+        'password',
+        'password_confirmation',
+    ];
+
+    /**
+     * Report or log an exception.
+     *
+     * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
+     *
+     * @param  \Exception  $exception
+     * @return void
+     */
+    public function report(Exception $exception)
+    {
+        parent::report($exception);
+    }
+
+    /**
+     * Render an exception into an HTTP response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Exception  $exception
+     * @return \Illuminate\Http\Response
+     */
+    public function render($request, Exception $exception)
+    {
+        return parent::render($request, $exception);
+
+
+
+    }
+
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        //return $request->expectsJson()
+        //            ? response()->json(['message' => $exception->getMessage()], 401)
+        //            : redirect()->guest(route('login'));
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $exception->getMessage()], 401);
+        } else {
+            session()->flash("danger","没有权限,请登录！！！");
+            return in_array('web', $exception->guards()) ? redirect()->guest(route('admin.admin.login')) :
+                redirect()->guest(route('shop.user.login'));
+        }
+    }
+
+}
+
+```
+
+### 控制器
+
+```php
+<?php
+
+namespace App\Http\Controllers\Shop;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
+class BaseController extends Controller
+{
+    //
+
+    public function __construct()
+    {
+        $this->middleware("auth:web",[
+            "except"=>["login","reg"]
+        ]);
+    }
+
+}
+
+```
+
+### 一个商户只能有且仅有一个默认菜品分类 
+
+```php
+<?php
+
+namespace App\Http\Controllers\shop;
+
+use App\Models\Menu;
+use App\Models\MenuCategory;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class MenuCategoryController extends BaseController
+{
+    //
+    public function index(){
+
+        $menu_categorys=MenuCategory::all();
+        //显示视图并传递数据
+        return view("shop.menu_category.index",compact("menu_categorys"));
+
+    }
+
+    public function add(Request $request){
+
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //验证
+            $this->validate($request,[
+                'name'=>'required|unique',
+                'description'=>'required',
+                'is_selected'=>'required',
+            ]);
+
+            //接收数据
+
+            $data=$request->post();
+
+            $shopId = Auth::user()->information->id;
+
+            $data["information_id"]=$shopId;
+//            dd( $data["information_id"]);
+
+            //判断,只能只有一个默认值
+            if($request->post("is_selected")){
+                //把所有的is_selected设置为0
+                MenuCategory::where("is_selected",1)->where("information_id",$shopId)->update(["is_selected"=>0]);
+            }
+
+            //数据入库
+            if (MenuCategory::create($data)){
+                //跳转
+                return redirect()->route("shop.menu_category.index")->with("success","添加成功");
+            }
+
+        }else{
+
+            //显示视图
+            return view("shop.menu_category.add");
+
+        }
+    }
+
+    //修改
+    public function edit(Request $request,$id){
+
+        //通过id得到对象
+        $menu_category=MenuCategory::find($id);
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //接收数据
+            $data=$request->post();
+
+            $shopId = Auth::user()->information->id;
+
+            $data["information_id"]=$shopId;
+
+            //判断,只能只有一个默认值
+            if($request->post("is_selected")){
+                //把所有的is_selected设置为0
+                MenuCategory::where("is_selected",1)->where("information_id",$shopId)->update(["is_selected"=>0]);
+            }
+
+            if ($menu_category->update($data)){
+                return redirect()->route("shop.menu_category.index")->with("success","修改成功");
+            }
+
+        }else{
+            //显示视图并传数据
+            return view("shop.menu_category.edit",compact("menu_category"));
+        }
+
+
+    }
+
+
+    //删除
+    public function del($id){
+
+
+        //得到当前分类
+        $cate=MenuCategory::findOrFail($id);
+        //得到当前分类对应的店铺数
+        $shopCount=Menu::where('category_id',$cate->id)->count();
+        //判断当前分类店铺数
+        if ($shopCount){
+            //回跳
+            return  back()->with("danger","当前分类下有菜品，不能删除");
+        }
+        //否则删除
+        $cate->delete();
+        //跳转
+        return redirect()->route('shop.menu_category.index')->with('success',"删除成功");
+    }
+
+
+    //查看
+    public function check($id){
+
+        $lists = DB::table("menus")->where("category_id",$id)->get();
+
+//        $menu_categorys=MenuCategory::all();
+
+        return view("shop.menu_category.check",compact("lists"));
+
+    }
+
+
+}
+
+```
 
 
 

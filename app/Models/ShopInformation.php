@@ -19,6 +19,14 @@ class ShopInformation extends Model
         return $this->belongsTo(ShopCategory::class,"shop_category_id");
     }
 
+    public function menus(){
+        return $this->hasOne(Menu::class,"information_id");
+    }
+
+    public function menuCategory(){
+        return $this->hasOne(MenuCategory::class,"information_id");
+    }
+
 }
 
 

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
-class ShopInformationController extends Controller
+class ShopInformationController extends BaseController
 {
     //显示所有商家信息
     public function index(){
@@ -45,15 +45,20 @@ class ShopInformationController extends Controller
             $data['piao']=$request->has('piao')?'1':'0';
             $data['zhun']=$request->has('zhun')?'1':'0';
 
-
+            //设置店铺的状态，为0 未审核
+            $data["status"]=0;
+            //设置用户id
+            $data["user_id"]=Auth::user()->id;
 //            dd($data);
             //上传图片
             $data['shop_img']=$request->file("shop_img")->store("images","image");
 
             //将数据入库
             if(ShopInformation::create($data)){
+                //注销
+                Auth::logout();
                 //跳转
-                return redirect()->intended(route("shop.user.index"))->with("success","申请成功，等待审核");
+                return redirect()->intended(route("shop.user.login"))->with("success","申请成功，等待审核");
             }
 
         }else{

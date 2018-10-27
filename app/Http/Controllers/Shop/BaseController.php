@@ -8,4 +8,12 @@ use App\Http\Controllers\Controller;
 class BaseController extends Controller
 {
     //
+
+    public function __construct()
+    {
+        $this->middleware("auth:web",[
+            "except"=>["login","reg"]
+        ]);
+    }
+
 }
