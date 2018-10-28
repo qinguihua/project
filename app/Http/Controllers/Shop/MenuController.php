@@ -8,6 +8,7 @@ use App\Models\MenuCategory;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class MenuController extends BaseController
 {
@@ -56,12 +57,14 @@ class MenuController extends BaseController
 
             //接收数据
             $data=$request->post();
-//            $shopId = Auth::user()->shop_information->id;
-            $shopId=$data["information_id"];
+//           dd(Auth::user()->information->id);
+            $shopId = Auth::user()->information->id;
+
+            $data["information_id"]=$shopId;
 
             $data['status']=$request->has('status')?'1':'0';
             //上传图片
-            $data['goods_img']=$request->file("goods_img")->store("images","image");
+            $data['goods_img']=$request->file("goods_img")->store("images");
             //数据入库
             if (Menu::create($data)){
                 //跳转
@@ -89,12 +92,12 @@ class MenuController extends BaseController
             $data=$request->post();
             $data['status']=$request->has('status')?'1':'0';
 
-            //判断是否重新上传图片
-            if($request->file("goods_img")!==null){
-                $data['goods_img']=$request->file("goods_img")->store("images","image");
-            }else{
-                $data['goods_img']=$menu->goods_img;
-            }
+//            //判断是否重新上传图片
+//            if($request->file("goods_img")!==null){
+//                $data['goods_img']=$request->file("goods_img")->store("images");
+//            }else{
+//                $data['goods_img']=$menu->goods_img;
+//            }
 
             if ($menu->update($data)){
                 return redirect()->route("shop.menu.index")->with("success","修改成功");
@@ -121,5 +124,24 @@ class MenuController extends BaseController
         }
 
     }
+
+
+    public function upload(Request $request){
+
+        //处理上传
+        $file=$request->file("file");
+
+        if ($file){
+            $url=$file->store("menu_cate");
+            //得到真实的地址
+            $url=Storage::url($url);
+            $data["url"]=$url;
+            return $data;
+        }
+
+
+
+    }
+
 
 }

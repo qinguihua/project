@@ -20,6 +20,20 @@
                 <li><a href="{{route('shop.user.home')}}">商家管理</a></li>
                 <li><a href="{{route('admin.admin.index')}}">管理员管理</a></li>
             </ul>
+
+            <ul class="nav navbar-nav navbar-left">
+                <li class="dropdown">
+                    <a href="{{route('admin.category.index')}}" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">商家分类<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">添加分类</a></li>
+                        <li><a href="#">Another action</a></li>
+                        <li><a href="#">Something else here</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="#">Separated link</a></li>
+                    </ul>
+                </li>
+            </ul>
+
             <ul class="nav navbar-nav navbar-right">
              @auth("admin")
                 <li class="dropdown">

@@ -2156,6 +2156,756 @@ class MenuCategoryController extends BaseController
 
 ```
 
+## Day04
+
+### 开发任务
+
+优化 - 将网站图片上传到阿里云OSS对象存储服务，以减轻服务器压力(<https://github.com/jacobcyl/Aliyun-oss-storage>) - 使用webuploder图片上传插件，提升用户上传图片体验
+
+平台 - 平台活动管理（活动列表可按条件筛选 未开始/进行中/已结束 的活动） - 活动内容使用ueditor内容编辑器(<https://github.com/overtrue/laravel-ueditor>)
+
+商户端 - 查看平台活动（活动列表和活动详情） - 活动列表不显示已结束的活动
+
+# 实现步骤
+
+## 阿里云OSS
+
+1. 登录阿里云网站
+
+2. 开通oss(实名认证之后申请半年免费)
+
+3. 进入控制器 OSS操作面板
+
+4. 新建 bucket 取名 域名 标准存储 公共读
+
+5. 点击用户图像---》accesskeys--->继续使用accsskeys--->添加accesskeys--->拿到access_id和access_key
+
+6. 执行 命令 安装 ali-oss插件(在phpstorm中执行)
+
+   ```php
+   composer require jacobcyl/ali-oss-storage -vvv
+   ```
+
+7. 修改 app/filesystems.php 添加如何代码
+
+   ```php
+   <?php
+   
+   return [
+   
+       ...此处省略N个代码
+       'disks' => [
+   
+   
+           'oss' => [
+               'driver'        => 'oss',
+               'access_id'     => 'LTAIN4ntRZ61ncKi',//账号
+               'access_key'    => 't8ER2mqST23gATgmx9w8u1v1jLMmWu',//密钥
+               'bucket'        => 'project-ele',//空间名称
+               'endpoint'      => 'oss-cn-shenzhen.aliyuncs.com', // OSS 外网节点或自定义外部域名
+   
+           ],
+   
+       ],
+   
+   ];
+   ```
+
+8. 修改 .env配置文件 设置文件上传驱动为oss
+
+   ```php
+   FILESYSTEM_DRIVER=oss
+   ALIYUN_OSS_URL=http://project-ele.oss-cn-shenzhen.aliyuncs.com/
+   ALIYUNU_ACCESS_ID=LTAIN4ntRZ61ncKi
+   ALIYUNU_ACCESS_KEY=t8ER2mqST23gATgmx9w8u1v1jLMmWu
+   ALIYUNU_OSS_BUCKET=project-ele
+   ALIYUNU_OSS_ENDPOINT=oss-cn-shenzhen.aliyuncs.com
+   ```
+
+9. 获取图片 及 缩略图
+
+   ```php
+               <td><img src="{{env("ALIYUN_OSS_URL").$menu->goods_img}}?x-oss-process=image/resize,m_fill,w_80,h_80"></td>
+   ```
+
+### webuploader
+
+#### 下载并解压
+
+```php
+ https://github.com/fex-team/webuploader/releases/download/0.1.5/webuploader-0.1.5.zip
+```
+
+#### 将解压文件复制到public文件夹下面
+
+#### 分别引用css和js修改layouts里的main模板
+
+```php
+<!--引入CSS-->
+    <link rel="stylesheet" type="text/css" href="/webuploader/webuploader.css">
+    
+ <body>
+    
+    <!--引入JS-->
+<script type="text/javascript" src="/webuploader/webuploader.js"></script>
+    
+@yield("js")
+    
+</body>
+</html>
+```
+
+### 在添加视图中
+
+```html
+<div class="form-group">
+                <label>商品图片</label>
+
+                <input type="hidden" name="goods_img" value="" id="goods_img">
+                <!--dom结构部分-->
+                <div id="uploader-demo">
+                    <!--用来存放item-->
+                    <div id="fileList" class="uploader-list"></div>
+                    <div id="filePicker">选择图片</div>
+                </div>
+            </div>
+```
+
+### js
+
+```js
+@section("js")
+    <script>
+        // 图片上传demo
+        jQuery(function () {
+            var $ = jQuery,
+                $list = $('#fileList'),
+                // 优化retina, 在retina下这个值是2
+                ratio = window.devicePixelRatio || 1,
+
+                // 缩略图大小
+                thumbnailWidth = 100 * ratio,
+                thumbnailHeight = 100 * ratio,
+
+                // Web Uploader实例
+                uploader;
+
+            // 初始化Web Uploader
+            uploader = WebUploader.create({
+
+                // 自动上传。
+                auto: true,
+
+                formData: {
+                    // 这里的token是外部生成的长期有效的，如果把token写死，是可以上传的。
+                    _token:'{{csrf_token()}}'
+                },
+
+
+                // swf文件路径
+                swf: '/webuploader/Uploader.swf',
+
+                // 文件接收服务端。
+                server: '{{route("shop.menu.upload")}}',
+
+                // 选择文件的按钮。可选。
+                // 内部根据当前运行是创建，可能是input元素，也可能是flash.
+                pick: '#filePicker',
+
+                // 只允许选择文件，可选。
+                accept: {
+                    title: 'Images',
+                    extensions: 'gif,jpg,jpeg,bmp,png',
+                    mimeTypes: 'image/*'
+                }
+            });
+
+            // 当有文件添加进来的时候
+            uploader.on('fileQueued', function (file) {
+                var $li = $(
+                    '<div id="' + file.id + '" class="file-item thumbnail">' +
+                    '<img>' +
+                    '<div class="info">' + file.name + '</div>' +
+                    '</div>'
+                    ),
+                    $img = $li.find('img');
+
+                $list.html($li);
+
+                // 创建缩略图
+                uploader.makeThumb(file, function (error, src) {
+                    if (error) {
+                        $img.replaceWith('<span>不能预览</span>');
+                        return;
+                    }
+
+                    $img.attr('src', src);
+                }, thumbnailWidth, thumbnailHeight);
+            });
+
+            // 文件上传过程中创建进度条实时显示。
+            uploader.on('uploadProgress', function (file, percentage) {
+                var $li = $('#' + file.id),
+                    $percent = $li.find('.progress span');
+
+                // 避免重复创建
+                if (!$percent.length) {
+                    $percent = $('<p class="progress"><span></span></p>')
+                        .appendTo($li)
+                        .find('span');
+                }
+
+                $percent.css('width', percentage * 100 + '%');
+            });
+
+            // 文件上传成功，给item添加成功class, 用样式标记上传成功。
+            uploader.on('uploadSuccess', function (file,data) {
+                $('#' + file.id).addClass('upload-state-done');
+
+                $("#goods_img").val(data.url);
+            });
+
+            // 文件上传失败，现实上传出错。
+            uploader.on('uploadError', function (file) {
+                var $li = $('#' + file.id),
+                    $error = $li.find('div.error');
+
+                // 避免重复创建
+                if (!$error.length) {
+                    $error = $('<div class="error"></div>').appendTo($li);
+                }
+
+                $error.text('上传失败');
+            });
+
+            // 完成上传完了，成功或者失败，先删除进度条。
+            uploader.on('uploadComplete', function (file) {
+                $('#' + file.id).find('.progress').remove();
+            });
+        });
+    </script>
+@stop
+```
+
+### css
+
+```css
+#picker {
+    display: inline-block;
+    line-height: 1.428571429;
+    vertical-align: middle;
+    margin: 0 12px 0 0;
+}
+#picker .webuploader-pick {
+    padding: 6px 12px;
+    display: block;
+}
+
+
+#uploader-demo .thumbnail {
+    width: 110px;
+    height: 110px;
+}
+#uploader-demo .thumbnail img {
+    width: 100%;
+}
+.uploader-list {
+    width: 100%;
+    overflow: hidden;
+}
+.file-item {
+    float: left;
+    position: relative;
+    margin: 0 20px 20px 0;
+    padding: 4px;
+}
+.file-item .error {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    background: red;
+    color: white;
+    text-align: center;
+    height: 20px;
+    font-size: 14px;
+    line-height: 23px;
+}
+.file-item .info {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    right: 4px;
+    height: 20px;
+    line-height: 20px;
+    text-indent: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow : ellipsis;
+    font-size: 12px;
+    z-index: 10;
+}
+.upload-state-done:after {
+    content:"\f00c";
+    font-family: FontAwesome;
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 32px;
+    position: absolute;
+    bottom: 0;
+    right: 4px;
+    color: #4cae4c;
+    z-index: 99;
+}
+.file-item .progress {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    height: 3px;
+    left: 4px;
+    height: 4px;
+    overflow: hidden;
+    z-index: 15;
+    margin:0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+}
+.file-item .progress span {
+    display: block;
+    overflow: hidden;
+    width: 0;
+    height: 100%;
+    background: #d14 url(../images/progress.png) repeat-x;
+    -webit-transition: width 200ms linear;
+    -moz-transition: width 200ms linear;
+    -o-transition: width 200ms linear;
+    -ms-transition: width 200ms linear;
+    transition: width 200ms linear;
+    -webkit-animation: progressmove 2s linear infinite;
+    -moz-animation: progressmove 2s linear infinite;
+    -o-animation: progressmove 2s linear infinite;
+    -ms-animation: progressmove 2s linear infinite;
+    animation: progressmove 2s linear infinite;
+    -webkit-transform: translateZ(0);
+}
+@-webkit-keyframes progressmove {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 17px 0;
+    }
+}
+@-moz-keyframes progressmove {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 17px 0;
+    }
+}
+@keyframes progressmove {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 17px 0;
+    }
+}
+
+a.travis {
+  position: relative;
+  top: -4px;
+  right: 15px;
+}
+```
+
+## 修改同上
+
+```php
+  //修改
+    public function edit(Request $request,$id){
+
+        //通过id得到对象
+        $menu=Menu::find($id);
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //接收数据
+            $data=$request->post();
+            $data['status']=$request->has('status')?'1':'0';
+
+//            //判断是否重新上传图片
+//            if($request->file("goods_img")!==null){
+//                $data['goods_img']=$request->file("goods_img")->store("images");
+//            }else{
+//                $data['goods_img']=$menu->goods_img;
+//            }
+
+            if ($menu->update($data)){
+                return redirect()->route("shop.menu.index")->with("success","修改成功");
+            }
+
+        }else{
+            //显示视图并传数据
+            $results=MenuCategory::all();
+            return view("shop.menu.edit",compact("menu","results"));
+        }
+
+    }
+```
+
+## ueditor内容编辑器
+
+### 安装
+
+```php
+composer require "overtrue/laravel-ueditor:~1.0"
+```
+
+### 配置
+
+添加下面一行到 `config/app.php` 中 `providers` 部分：
+
+```php
+Overtrue\LaravelUEditor\UEditorServiceProvider::class,
+```
+
+### 发布配置文件与资源
+
+```php
+php artisan vendor:publish 
+    
+然后选择 ：
+  Provider: Overtrue\LaravelUEditor\UEditorServiceProvider对应的数字
+
+```
+
+### 在config/ueditor.php中修改 
+
+```php
+return [
+    // 存储引擎: config/filesystem.php 中 disks， public 或 qiniu
+    'disk' => 'oss',
+    'route' => [
+        'name' => '/ueditor/server',
+        'options' => [
+            // middleware => 'auth',
+        ],
+    ],
+```
+
+
+
+### 模板引入编辑器
+
+这行的作用是引入编辑器需要的 css,js 等文件，所以你不需要再手动去引入它们
+
+```php
+@include('vendor.ueditor.assets')
+```
+
+### 编辑器初始化
+
+```php
+<!-- 实例化编辑器 -->
+<script type="text/javascript">
+    var ue = UE.getEditor('container');
+    ue.ready(function() {
+        ue.execCommand('serverparam', '_token', '{{ csrf_token() }}'); // 设置 CSRF token.
+    });
+</script>
+
+<!-- 编辑器容器 -->
+<script id="container" name="content" type="text/plain"></script>
+```
+
+## 活动列表
+
+```php
+public function index(){
+
+        $activitys=Activity::all();
+        //显示视图并传递数据
+        return view("admin.activity.index",compact("activitys"));
+
+    }
+```
+
+### 视图
+
+```html
+@extends("admin.layouts.main")
+@section("title","活动列表")
+@section("content")
+
+
+    <a href="{{route("admin.activity.add")}}" class="btn btn-info">添加</a>
+    <br>
+    <br>
+    <table class="table table-striped">
+        <tr>
+            <th>Id</th>
+            <th>活动标题</th>
+            <th>活动内容</th>
+            <th>开始时间</th>
+            <th>结束时间</th>
+            <th>操作</th>
+        </tr>
+        @foreach($activitys as $activity)
+            <tr>
+                <td>{{$activity->id}}</td>
+                <td>{{$activity->title}}</td>
+                <td>{{$activity->content}}</td>
+                <td>{{$activity->start_time}}</td>
+                <td>{{$activity->end_time}}</td>
+
+                <td>
+                    <a href="{{route("admin.activity.edit",$activity->id)}}" class="btn btn-success">编辑</a>
+                    <a href="{{route("admin.activity.del",$activity->id)}}" class="btn btn-danger">删除</a>
+                </td>
+            </tr>
+        @endforeach
+    </table>
+
+@endsection
+```
+
+### 添加，内容用编辑器
+
+```php
+ public function add(Request $request){
+
+        //判断提交方式
+        if ($request->isMethod("post")){
+
+            //验证
+            $this->validate($request,[
+                'title'=>'required',
+                'content'=>'required',
+                'start_time'=>'required',
+                'end_time'=>'required',
+            ]);
+
+            //接收数据
+
+            $data=$request->post();
+
+            //数据入库
+            if (Activity::create($data)){
+                //跳转
+                return redirect()->route("admin.activity.index")->with("success","添加成功");
+            }
+
+        }else{
+
+            //显示视图
+            return view("admin.activity.add");
+
+        }
+    }
+```
+
+### main
+
+```php
+@yield("js")
+    
+</body>
+```
+
+### 视图
+
+```html
+@extends("admin.layouts.main")
+@section("title","添加活动")
+@section("content")
+
+
+    <form method="post" enctype="multipart/form-data" class="table table-striped">
+        {{ csrf_field() }}
+        <div class="form-group">
+            <label>活动标题</label>
+            <input type="text" class="form-control" placeholder="活动标题" name="title" value="{{old("title")}}">
+        </div>
+
+        <div class="form-group">
+            <label>活动开始时间</label>
+            <input type="datetime-local" class="form-control" placeholder="活动开始时间" name="start_time" value="{{old("start_time")}}">
+        </div>
+
+        <div class="form-group">
+            <label>活动结束时间</label>
+            <input type="datetime-local" class="form-control" placeholder="活动结束时间" name="end_time" value="{{old("end_time")}}">
+        </div>
+
+        <div class="form-group">
+            <label>活动内容</label>
+            <script id="container" name="content" type="text/plain"></script>
+        </div>
+
+        <button type="submit" class="btn btn-default">添加</button>
+    </form>
+@endsection
+
+<!-- 实例化编辑器 -->
+@section("js")
+    <script type="text/javascript">
+        var ue = UE.getEditor('container');
+        ue.ready(function() {
+            ue.execCommand('serverparam', '_token', '{{ csrf_token() }}'); // 设置 CSRF token.
+        });
+    </script>
+@endsection
+```
+
+### 编辑
+
+```php
+//修改
+    public function edit(Request $request,$id)
+    {
+
+        //通过id得到对象
+        $activity = Activity::find($id);
+
+        $activity->start_time = str_replace(" ", "T", $activity->start_time);
+        $activity->end_time = str_replace(" ", "T", $activity->end_time);
+
+        //判断提交方式
+        if ($request->isMethod("post")) {
+            $data = $this->validate($request, [
+                "title" => "required",
+                "start_time" => "required",
+                "end_time" => "required",
+                "content" => "required"
+            ]);
+//            $data=$request->post();
+//           dd($data);
+            $data['start_time'] = str_replace("T", " ", $data['start_time']);
+            $data['end_time'] = str_replace("T", " ", $data['end_time']);
+
+//            dd($data);
+            $data->update($data);
+            return redirect()->intended(route("admin.activity.index"))->with("success", "修改成功");
+        }else{
+
+            return view("admin.activity.edit",compact("activity"));
+        }
+    }
+
+```
+
+### 视图
+
+```html
+@extends("admin.layouts.main")
+@section("title","修改活动")
+@section("content")
+
+
+    <form method="post" enctype="multipart/form-data" class="table table-striped">
+        {{ csrf_field() }}
+        <div class="form-group">
+            <label>活动标题</label>
+            <input type="text" class="form-control" placeholder="活动标题" name="title" value="{{$activity->title}}">
+        </div>
+
+        <div class="form-group">
+            <label>活动开始时间</label>
+            <input type="datetime-local" class="form-control" placeholder="活动开始时间" name="start_time" value="{{$activity->start_time}}">
+        </div>
+
+        <div class="form-group">
+            <label>活动结束时间</label>
+            <input type="datetime-local" class="form-control" placeholder="活动结束时间" name="end_time" value="{{$activity->end_time}}">
+        </div>
+
+        <div class="form-group">
+            <label>活动内容</label>
+            <script id="container" name="content" type="text/plain">{{$activity->content}}</script>
+        </div>
+
+        <button type="submit" class="btn btn-default">修改</button>
+    </form>
+@endsection
+
+<!-- 实例化编辑器 -->
+@section("js")
+    <script type="text/javascript">
+        var ue = UE.getEditor('container');
+        ue.ready(function() {
+            ue.execCommand('serverparam', '_token', '{{ csrf_token() }}'); // 设置 CSRF token.
+        });
+    </script>
+@endsection
+
+```
+
+### 在前台显示未结束的活动列表
+
+```php
+<?php
+
+namespace App\Http\Controllers\shop;
+
+use App\Models\Activity;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
+class ActivityController extends BaseController
+{
+    //
+    public function show(){
+
+        $activitys=Activity::where("end_time",">=",date('Y-m-d H:i:s', time()))->get();
+
+        return view("shop.user.show",compact("activitys"));
+
+    }
+}
+```
+
+### 视图
+
+```html
+@extends("admin.layouts.main")
+@section("title","活动列表")
+@section("content")
+
+        <a href="{{route("admin.activity.add")}}" class="btn btn-info">添加</a>
+
+    <br>
+    <br>
+    <table class="table table-striped">
+        <tr>
+            <th>活动标题</th>
+            <th>活动内容</th>
+            <th>开始时间</th>
+            <th>结束时间</th>
+        </tr>
+        @foreach($activitys as $activity)
+            <tr>
+                <td>{{$activity->title}}</td>
+                <td>{{$activity->content}}</td>
+                <td>{{$activity->start_time}}</td>
+                <td>{{$activity->end_time}}</td>
+            </tr>
+        @endforeach
+    </table>
+@endsection
+```
+
+
+
+
+
 
 
 

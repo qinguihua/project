@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DRIVER', 'local'),
+    'default' => env('FILESYSTEM_DRIVER', 'oss'),
 
     /*
     |--------------------------------------------------------------------------
@@ -69,5 +69,20 @@ return [
         ],
 
     ],
+
+    'disks' => [
+
+
+        'oss' => [
+            'driver'        => 'oss',
+            'access_id'     => 'LTAIN4ntRZ61ncKi',//账号
+            'access_key'    => 't8ER2mqST23gATgmx9w8u1v1jLMmWu',//密钥
+            'bucket'        => 'project-ele',//空间名称
+            'endpoint'      => 'oss-cn-shenzhen.aliyuncs.com', // OSS 外网节点或自定义外部域名
+
+        ],
+
+    ],
+
 
 ];

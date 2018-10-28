@@ -40,6 +40,9 @@ Route::domain("shop.ele.com")->namespace("Shop")->group(function (){
     Route::any("user/edit{id}","UserController@edit")->name("shop.user.edit");
     Route::get("user/del{id}","UserController@del")->name("shop.user.del");
 
+    //前台显示活动列表
+    Route::any("user/show","ActivityController@show")->name("shop.user.show");
+
 
     //菜品分类
     Route::get("menu_category/index","MenuCategoryController@index")->name("shop.menu_category.index");
@@ -54,6 +57,9 @@ Route::domain("shop.ele.com")->namespace("Shop")->group(function (){
     Route::any("menu/add","MenuController@add")->name("shop.menu.add");
     Route::any("menu/edit{id}","MenuController@edit")->name("shop.menu.edit");
     Route::get("menu/del{id}","MenuController@del")->name("shop.menu.del");
+    //图片自动上传
+    Route::any("menu/upload","MenuController@upload")->name("shop.menu.upload");
+
 
 });
 
@@ -80,6 +86,13 @@ Route::domain("admin.ele.com")->namespace("Admin")->group(function (){
     Route::any("admin/add","AdminController@add")->name("admin.admin.add");
     Route::any("admin/edit{id}","AdminController@edit")->name("admin.admin.edit");
     Route::get("admin/del{id}","AdminController@del")->name("admin.admin.del");
+
+
+    //活动列表
+    Route::get("activity/index","ActivityController@index")->name("admin.activity.index");
+    Route::any("activity/add","ActivityController@add")->name("admin.activity.add");
+    Route::any("activity/edit{id}","ActivityController@edit")->name("admin.activity.edit");
+    Route::get("activity/del{id}","ActivityController@del")->name("admin.activity.del");
 
 });
 

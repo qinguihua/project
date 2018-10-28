@@ -54,7 +54,9 @@
             <td>{{$menu->goods_price}}</td>
             <td>{{$menu->description}}</td>
             <td>{{$menu->month_sales}}</td>
-            <td><img src="/{{$menu->goods_img}}" alt="" width="100"></td>
+            {{--<td><img src="/{{$menu->goods_img}}" alt="" width="100">--}}
+            <td><img src="{{$menu->goods_img}}?x-oss-process=image/resize,m_fill,w_80,h_80"></td>
+            </td>
             <td>
                 <a href="{{route("shop.menu.edit",$menu->id)}}" class="btn btn-success">编辑</a>
                 <a href="{{route("shop.menu.del",$menu->id)}}" class="btn btn-danger">删除</a>
