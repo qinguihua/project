@@ -40,7 +40,7 @@ class MenuController extends BaseController
             $query->where("goods_price","<=","$maxPrice");
         }
 
-        $menus=$query->paginate(2);
+        $menus=$query->paginate(3);
 
 
         //显示视图并传递数据
@@ -63,8 +63,8 @@ class MenuController extends BaseController
             $data["information_id"]=$shopId;
 
             $data['status']=$request->has('status')?'1':'0';
-            //上传图片
-            $data['goods_img']=$request->file("goods_img")->store("images");
+//            //上传图片
+//            $data['goods_img']=$request->file("goods_img");
             //数据入库
             if (Menu::create($data)){
                 //跳转
@@ -134,13 +134,10 @@ class MenuController extends BaseController
         if ($file){
             $url=$file->store("menu_cate");
             //得到真实的地址
-            $url=Storage::url($url);
+//            $url=Storage::url($url);
             $data["url"]=$url;
             return $data;
         }
-
-
-
     }
 
 

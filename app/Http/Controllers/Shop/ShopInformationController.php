@@ -10,13 +10,6 @@ use Illuminate\Support\Facades\Auth;
 
 class ShopInformationController extends BaseController
 {
-    //显示所有商家信息
-    public function index(){
-        $informations=ShopInformation::all();
-//        $results=ShopCategory::all();
-        //显示视图并传递数据
-        return view("shop.information.index",compact("informations"));
-    }
 
     //添加
     public function add(Request $request){
@@ -51,7 +44,7 @@ class ShopInformationController extends BaseController
             $data["user_id"]=Auth::user()->id;
 //            dd($data);
             //上传图片
-            $data['shop_img']=$request->file("shop_img")->store("images","image");
+//            $data['shop_img']=$request->file("shop_img")->store("images","image");
 
             //将数据入库
             if(ShopInformation::create($data)){
@@ -70,29 +63,20 @@ class ShopInformationController extends BaseController
         }
     }
 
-    //审核
-    public function check($id){
-//        $id =Auth::id();
-//        dd($id);
-       $information=ShopInformation::findOrFail($id);
-//       dd($information);
-       $information->status=1;
-       $information->save();
-       return back()->with("success","通过审核");
-    }
 
 
+    public function upload(Request $request){
 
-    //删除
-    public function del($id){
+        //处理上传
+        $file=$request->file("file");
 
-        $information=ShopInformation::findOrFail($id);
-
-        if($information->delete()){
-            //跳转
-            return redirect()->route("shop.information.index")->with("success","删除成功");
+        if ($file){
+            $url=$file->store("menu_cate");
+            //得到真实的地址
+//            $url=Storage::url($url);
+            $data["url"]=$url;
+            return $data;
         }
-
     }
 
 

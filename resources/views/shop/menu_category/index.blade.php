@@ -17,7 +17,7 @@
         <tr>
             <td>{{$menu_category->id}}</td>
             <td>{{$menu_category->name}}</td>
-            <td>{{$menu_category->shopinformation->shop_name}}</td>
+            <td>{{$menu_category->shop_information->shop_name}}</td>
             <td>{{$menu_category->description}}</td>
             <td>{{$menu_category->is_selected}}</td>
             <td>

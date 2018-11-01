@@ -25,11 +25,10 @@
             <label>商品分类</label>
             <select name="category_id" id="">
                 @foreach($results as $result)
-                <option value="{{$result->information_id}}">{{$result->name}}</option>
+                <option value="{{$result->id}}">{{$result->name}}</option>
                 @endforeach
             </select>
         </div>
-
         <div class="form-group">
             <label>商品价格</label>
             <input type="text" class="form-control" placeholder="价格" name="goods_price" value="{{old("goods_price")}}">
@@ -88,7 +87,7 @@
                 </label>
             </div>
 
-            <button type="submit" class="btn btn-default">确认申请</button>
+            <button type="submit" class="btn btn-default">添加</button>
     </form>
 @endsection
 

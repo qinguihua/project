@@ -1,6 +1,6 @@
 @extends("shop.layouts.main")
 
-@section("title","添加菜品")
+@section("title","修改菜品")
 
 @section("content")
 
@@ -73,7 +73,7 @@
             <div class="form-group">
                 <label>商品图片</label>
 
-                <input type="text" name="goods_img" value="" id="goods_img">
+                <input type="hidden" name="goods_img" value="" id="goods_img">
                 <!--dom结构部分-->
                 <div id="uploader-demo">
                     <!--用来存放item-->
@@ -84,8 +84,8 @@
 
             <div class="checkbox">
                 <label>
-                    <input type="radio" name="status"> 上架
-                    <input type="radio" name="status"> 下架
+                    <input type="radio" name="status" value="1"> 上架
+                    <input type="radio" name="status" value="0"> 下架
                 </label>
             </div>
 

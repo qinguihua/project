@@ -2,10 +2,6 @@
 @section("title","活动列表")
 @section("content")
 
-        <a href="{{route("admin.activity.add")}}" class="btn btn-info">添加</a>
-
-    <br>
-    <br>
     <table class="table table-striped">
         <tr>
             <th>活动标题</th>

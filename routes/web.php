@@ -12,12 +12,12 @@
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('index');
 });
 
 Route::domain("shop.ele.com")->namespace("Shop")->group(function (){
 
-    //商户注册
+    //@regtion 商户注册
     Route::any("user/reg","RegController@reg")->name("shop.user.reg");
     //商户登录
     Route::any("user/login","RegController@login")->name("shop.user.login");
@@ -28,11 +28,15 @@ Route::domain("shop.ele.com")->namespace("Shop")->group(function (){
     //后台首页
     Route::any("user/index","RegController@index")->name("shop.user.index");
     //商家店铺信息
-    Route::get("information/index","ShopInformationController@index")->name("shop.information.index");
+//    Route::get("information/index","ShopInformationController@index")->name("shop.information.index");
     Route::any("information/add","ShopInformationController@add")->name("shop.information.add");
-    Route::any("information/check/{id}","ShopInformationController@check")->name("shop.information.check");
-    Route::any("information/edit{id}","ShopInformationController@edit")->name("shop.information.edit");
-    Route::get("information/del{id}","ShopInformationController@del")->name("shop.information.del");
+//    Route::any("information/check/{id}","ShopInformationController@check")->name("shop.information.check");
+//    Route::any("information/edit{id}","ShopInformationController@edit")->name("shop.information.edit");
+//    Route::get("information/del{id}","ShopInformationController@del")->name("shop.information.del");
+
+    //图片自动上传
+    Route::any("information/upload","ShopInformationController@upload")->name("shop.information.upload");
+
 
     //商家基本信息的管理
     Route::get("user/home","UserController@home")->name("shop.user.home");
@@ -81,12 +85,28 @@ Route::domain("admin.ele.com")->namespace("Admin")->group(function (){
     Route::any("category/edit{id}","ShopCategoryController@edit")->name("admin.category.edit");
     Route::get("category/del{id}","ShopCategoryController@del")->name("admin.category.del");
 
+    //图片上传
+    Route::any("category/upload","ShopCategoryController@upload")->name("admin.category.upload");
+
+    //商家店铺信息
+    Route::get("information/index","ShopInformationController@index")->name("admin.information.index");
+    Route::any("information/add","ShopInformationController@add")->name("admin.information.add");
+    Route::any("information/check/{id}","ShopInformationController@check")->name("admin.information.check");
+    Route::any("information/edit{id}","ShopInformationController@edit")->name("admin.information.edit");
+    Route::get("information/del{id}","ShopInformationController@del")->name("admin.information.del");
+    //图片上传
+    Route::any("information/upload","ShopInformationController@upload")->name("admin.information.upload");
     //管理员信息的管理
     Route::get("admin/index","AdminController@index")->name("admin.admin.index");
     Route::any("admin/add","AdminController@add")->name("admin.admin.add");
     Route::any("admin/edit{id}","AdminController@edit")->name("admin.admin.edit");
     Route::get("admin/del{id}","AdminController@del")->name("admin.admin.del");
 
+    //商家管理
+    Route::get("user/index","UserController@index")->name("admin.user.index");
+    Route::any("user/reg","UserController@reg")->name("admin.user.reg");
+    Route::any("user/del{id}","UserController@del")->name("admin.user.del");
+    Route::any("information/apply/{id}","ShopInformationController@apply")->name("admin.information.apply");
 
     //活动列表
     Route::get("activity/index","ActivityController@index")->name("admin.activity.index");

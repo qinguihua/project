@@ -29,7 +29,7 @@ class AdminController extends BaseController
             //验证账号和密码是否正确
             if (Auth::guard("admin")->attempt($data,$request->has("remember"))){
                 //登录成功
-                return redirect()->intended(route("shop.information.index"))->with("success","登录成功");
+                return redirect()->intended(route("admin.admin.index"))->with("success","登录成功");
             }else{
                 //登录失败
                 return redirect()->back()->withInput()->with("danger","账号或密码错误");

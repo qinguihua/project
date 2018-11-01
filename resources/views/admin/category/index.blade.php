@@ -18,9 +18,7 @@
             <tr>
                 <td>{{$category->id}}</td>
                 <td>{{$category->name}}</td>
-                <td>
-                    <img src="/{{$category->img}}" width="100">
-                </td>
+                <td><img src="{{env("ALIYUN_OSS_URL").$category->img}}?x-oss-process=image/resize,m_fill,w_80,h_80"></td>
                 <td>{{$category->status}}</td>
 
                 <td>

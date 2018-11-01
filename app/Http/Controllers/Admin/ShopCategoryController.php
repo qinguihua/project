@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Shop\BaseController;
+use App\Http\Controllers\Admin\BaseController;
 use App\Models\ShopCategory;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -22,7 +22,7 @@ class ShopCategoryController extends BaseController
             $data=$request->post();
 
             //上传图片
-            $data['img']=$request->file("img")->store("images","image");
+//            $data['img']=$request->file("img")->store("images","image");
 
             //将数据入库
             if(ShopCategory::create($data)){
@@ -45,11 +45,11 @@ class ShopCategoryController extends BaseController
             $data=$request->post();
             //dd($data);
             //判断图片是否重新上传
-            if($request->file("img")!==null){
-                $data['img']=$request->file("img")->store("images","image");
-            }else{
-                $data['img']=$category->img;
-            }
+//            if($request->file("img")!==null){
+//                $data['img']=$request->file("img")->store("images","image");
+//            }else{
+//                $data['img']=$category->img;
+//            }
 
             //将数据入库
             if($category->update($data)){
@@ -68,8 +68,21 @@ class ShopCategoryController extends BaseController
         $category=ShopCategory::find($id);
         if($category->delete()){
             //跳转
-
             return redirect()->intended(route("admin.category.index"))->with("success","删除成功");
+        }
+    }
+
+    public function upload(Request $request){
+
+        //处理上传
+        $file=$request->file("file");
+
+        if ($file){
+            $url=$file->store("menu_cate");
+            //得到真实的地址
+//            $url=Storage::url($url);
+            $data["url"]=$url;
+            return $data;
         }
     }
 

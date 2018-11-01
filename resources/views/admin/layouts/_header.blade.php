@@ -13,23 +13,52 @@
 
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-            <ul class="nav navbar-nav">
-                <li class="active"><a href="{{route('shop.user.index')}}">首页<span class="sr-only">(current)</span></a></li>
-                <li><a href="{{route('admin.category.index')}}">商家分类</a></li>
-                <li><a href="{{route('shop.information.index')}}">商家信息</a></li>
-                <li><a href="{{route('shop.user.home')}}">商家管理</a></li>
-                <li><a href="{{route('admin.admin.index')}}">管理员管理</a></li>
+            {{--<ul class="nav navbar-nav">--}}
+                {{--<li class="active"><a href="{{route('shop.user.index')}}">首页<span class="sr-only">(current)</span></a></li>--}}
+                {{--<li><a href="{{route('admin.category.index')}}">商家分类</a></li>--}}
+                {{--<li><a href="{{route('shop.information.index')}}">商家信息</a></li>--}}
+                {{--<li><a href="{{route('shop.user.home')}}">商家管理</a></li>--}}
+                {{--<li><a href="{{route('admin.admin.index')}}">管理员管理</a></li>--}}
+            {{--</ul>--}}
+
+            <ul class="nav navbar-nav navbar-left">
+                <li class="dropdown">
+                    <a href="{{route('admin.category.index')}}" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">店铺分类<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{route('admin.category.add')}}">添加分类</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="{{route('admin.category.index')}}">分类列表</a></li>
+                    </ul>
+                </li>
             </ul>
 
             <ul class="nav navbar-nav navbar-left">
                 <li class="dropdown">
-                    <a href="{{route('admin.category.index')}}" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">商家分类<span class="caret"></span></a>
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">店铺信息管理<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="#">添加分类</a></li>
-                        <li><a href="#">Another action</a></li>
-                        <li><a href="#">Something else here</a></li>
+                        {{--<li><a href="{{route('admin.information.add')}}">添加商家信息</a></li>--}}
+                        {{--<li role="separator" class="divider"></li>--}}
+                        <li><a href="{{route('admin.information.index')}}">店铺信息列表</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-left">
+                <li class="dropdown">
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">商户管理<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{route('admin.user.reg')}}">添加商户</a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="#">Separated link</a></li>
+                        <li><a href="{{route('admin.user.index')}}">商户列表</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-left">
+                <li class="dropdown">
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">管理员<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{route('admin.admin.index')}}">管理员列表</a></li>
                     </ul>
                 </li>
             </ul>
