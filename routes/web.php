@@ -65,6 +65,31 @@ Route::domain("shop.ele.com")->namespace("Shop")->group(function (){
     Route::any("menu/upload","MenuController@upload")->name("shop.menu.upload");
 
 
+    //订单详情
+    Route::get("order/index","OrderController@index")->name("shop.order.index");
+    //代付款
+    Route::any("order/status/{id}/{status}","OrderController@status")->name("order.status");
+    //查看
+    Route::any("order/check{id}","OrderController@check")->name("shop.order.check");
+    //按天统计
+    Route::any("order/day","OrderController@day")->name("shop.order.day");
+    //按月统计
+    Route::any("order/month","OrderController@month")->name("shop.order.month");
+    //订单销量
+    Route::any("order/order","OrderController@order")->name("shop.order.order");
+    //菜品销量
+    Route::any("order/menu","OrderController@menu")->name("shop.order.menu");
+    //按天统计
+    Route::any("order/day1","OrderController@day1")->name("shop.order.day1");
+    //按天统计
+    Route::any("order/month1","OrderController@month1")->name("shop.order.month1");
+
+
+    //抽奖活动
+    Route::get("event/index","EventController@index")->name("shop.event.index");
+    Route::any("event/sign/{id}","EventController@sign")->name("shop.event.sign");
+    Route::any("event/check/{id}","EventController@check")->name("shop.event.check");
+
 });
 
 
@@ -113,6 +138,66 @@ Route::domain("admin.ele.com")->namespace("Admin")->group(function (){
     Route::any("activity/add","ActivityController@add")->name("admin.activity.add");
     Route::any("activity/edit{id}","ActivityController@edit")->name("admin.activity.edit");
     Route::get("activity/del{id}","ActivityController@del")->name("admin.activity.del");
+
+
+    //订单销量
+    Route::any("order/order","OrderController@order")->name("admin.order.order");
+    //按天统计
+    Route::any("order/day","OrderController@day")->name("admin.order.day");
+    //按月统计
+    Route::any("order/month","OrderController@month")->name("admin.order.month");
+
+    //各个商家的销量
+    //月
+    Route::any("order/shopmonth","OrderController@shopmonth")->name("admin.order.shopmonth");
+    //天
+    Route::any("order/shopday","OrderController@shopday")->name("admin.order.shopday");
+    //总
+    Route::any("order/shopall","OrderController@shopall")->name("admin.order.shopall");
+
+
+    //会员管理
+    Route::get("member/index","MemberController@index")->name("admin.member.index");
+    Route::any("member/check/{id}","MemberController@check")->name("admin.member.check");
+
+
+    //权限列表
+    Route::get("permission/index","PermissionController@index")->name("admin.permission.index");
+    Route::any("permission/add","PermissionController@add")->name("admin.permission.add");
+    Route::any("permission/edit/{id}","PermissionController@edit")->name("admin.permission.edit");
+    Route::get("permission/del/{id}","PermissionController@del")->name("admin.permission.del");
+
+    //角色列表
+    Route::get("role/index","RoleController@index")->name("admin.role.index");
+    Route::any("role/add","RoleController@add")->name("admin.role.add");
+    Route::any("role/edit/{id}","RoleController@edit")->name("admin.role.edit");
+    Route::get("role/del/{id}","RoleController@del")->name("admin.role.del");
+
+
+    //导航条列表
+    Route::get("nav/index","NavController@index")->name("admin.nav.index");
+    Route::any("nav/add","NavController@add")->name("admin.nav.add");
+    Route::any("nav/edit/{id}","NavController@edit")->name("admin.nav.edit");
+    Route::get("nav/del/{id}","NavController@del")->name("admin.nav.del");
+
+
+
+    //抽奖活动
+    Route::get("event/index","EventController@index")->name("admin.event.index");
+    Route::any("event/add","EventController@add")->name("admin.event.add");
+    Route::any("event/edit/{id}","EventController@edit")->name("admin.event.edit");
+    Route::get("event/del/{id}","EventController@del")->name("admin.event.del");
+
+    //抽奖
+    Route::get("event/cj/{id}","EventController@cj")->name("admin.event.cj");
+
+
+    //抽奖活动奖品
+    Route::get("eventprize/index","EventPrizeController@index")->name("admin.eventprize.index");
+    Route::any("eventprize/add","EventPrizeController@add")->name("admin.eventprize.add");
+    Route::any("eventprize/edit/{id}","EventPrizeController@edit")->name("admin.eventprize.edit");
+    Route::get("eventprize/del/{id}","EventPrizeController@del")->name("admin.eventprize.del");
+
 
 });
 

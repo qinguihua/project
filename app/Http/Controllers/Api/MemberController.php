@@ -131,6 +131,49 @@ class MemberController extends Controller
                     }
 
                 }
+                return $data;
         }
+
+
+        //修改密码
+        public function alter(Request $request){
+
+            //接收数据
+            $data = $request->post();
+            $oldPassword=$request->post("oldPassword");
+            $newPassword=$request->post("newPassword");
+            //加密
+            $new = Hash::make($newPassword);
+            $member = Member::where("id", $data['id'])->first();
+
+            //判断旧密码是否正确
+           if (Hash::check($oldPassword,$member->password)) {
+               //修改新密码
+               Member::where('id',$data['id'])->update(['password'=>$new]);
+
+
+                   $data = [
+                       "status" => "true",
+                       "message" => "密码修改成功",
+                   ];
+               }else{
+                   $data = [
+                       "status" => "false",
+                       "message" => "密码修改失败",
+                   ];
+               }
+
+    return $data;
+
+        }
+
+        //显示余额与积分
+        public function detail(Request $request){
+            {
+                return Member::find($request->get('user_id'));
+            }
+        }
+
+
 
 }

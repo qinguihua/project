@@ -20,5 +20,9 @@ class Menu extends Model
         return $this->belongsTo(ShopInformation::class,"information_id");
     }
 
+    public function getGoodsImgAttribute($value){
+        return env("ALIYUN_OSS_URL").$value;
+    }
+
 }
 

@@ -1,4 +1,4 @@
-@extends("shop.layouts.main")
+@extends("admin.layouts.main")
 
 @section("title","添加管理员")
 
@@ -21,6 +21,12 @@
             <input type="password" class="form-control" placeholder="管理员密码" name="password">
         </div>
 
+        <div class="form-group">
+            <label>角色</label>
+                @foreach($roles as $role)
+                    <input type="checkbox" name="role[]" value="{{$role->id}}">{{$role->name}}
+                @endforeach
+            </div>
 
         <button type="submit" class="btn btn-default">添加</button>
     </form>

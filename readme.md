@@ -3519,6 +3519,17 @@ class Member extends Model
 Route::any("member/login","Api\MemberController@login");
 ```
 
+# Day07
+
+开发任务
+
+接口开发
+
+- 用户地址管理相关接口
+- 购物车相关接口
+
+### 实现步骤
+
 ### 忘记密码
 
 ```php
@@ -3685,10 +3696,535 @@ class AdressController extends Controller
 }
 ```
 
+## 实现步骤
+
+# Day08
+
+## 开发任务
+
+接口开发
+
+- 订单接口(使用事务保证订单和订单商品表同时写入成功)
+
+- 密码修改和重置密码接口
+
+  ### 添加订单
+
+  ```php
+  //添加订单
+      public function add(Request $request)
+      {
+          //当前收货地址
+          $address =Address::find($request->post('address_id'));
+         // dd($address);
+          //判断地址是否有误
+          if ($address === null) {
+              return [
+                  "status" => "false",
+                  "message" => "地址的选择不正确"
+              ];
+          }
+          //用户id
+          $data["user_id"] = $request->post('user_id');
+          //店铺id
+          $carts = Cart::where("user_id", $request->post('user_id'))->get();
+          //购物车里第一条数据的id，通过商品id找出菜品中的shop_id
+          $shopId = Menu::find($carts[0]->goods_id)->information_id;
+          //dd($shopId);
+          $data['shop_id'] = $shopId;
+          //生成订单号
+          $data["order_code"] = date("ymdHis") . rand(1000, 9999);
+          //地址
+          $data["province"] = $address->provence;
+          $data["city"] = $address->city;
+          $data["county"] = $address->area;
+          $data["address"] = $address->detail_address;
+          $data["tel"] = $address->tel;
+          $data["name"] = $address->name;
+          //总价
+          $total = 0;
+          foreach ($carts as $k => $v) {
+              //dd($v->toarrAy());
+              $good = Menu::where("id", $v->goods_id)->first();
+              $total += $v->amount * $good->goods_price;
+          }
+          $data['total'] = $total;
+          //状态
+          $data['status'] = 0;
+  
+          //启动事物
+          //dd($data);
+  
+          DB::beginTransaction();
+  
+          try {
+  
+              //订单入库
+              $order = Order::create($data);
+              //订单商品
+              foreach($carts as $s=>$cart){
+                  //得到当前菜品
+                  $menu=Menu::find($cart->goods_id);
+                  //判断库存是否充足
+                  if ($cart->amount>$menu->stock){
+                      //抛出异常
+                      throw new \Exception($menu->goods_name."库存不足");
+                  }
+                  //减去库存
+                  $menu->stock=$menu->stock-$cart->amount;
+                  //保存
+                  $menu->save();
+                  OrderDetail::insert([
+                     "order_id"=>$order->id,
+                     "goods_id"=>$cart->goods_id,
+                     "amount"=>$cart->amount,
+                     "goods_name"=>$menu->goods_name,
+                     "goods_img"=>$menu->goods_img,
+                      "goods_price"=>$menu->goods_price,
+                  ]);
+              }
+              //清空购物车
+              Cart::where("user_id",$request->post("user_id"))->delete();
+              //提交事务
+              DB::commit();
+          }catch (\Exception $exception){
+              //回滚
+              DB::rollBack();
+              return [
+                  "status"=>"false",
+                  "message"=>$exception->getMessage(),
+              ];
+          }
+  
+          return [
+              "status"=>"true",
+              "message"=>"添加成功",
+              "order_id"=>$order->id
+          ];
+  
+  }
+  ```
+
+  ### 模型Models/Order.php
+
+  ```php
+  <?php
+  
+  namespace App\Models;
+  
+  use Illuminate\Database\Eloquent\Model;
+  
+  class Order extends Model
+  {
+      //
+  
+      protected $fillable=["user_id","shop_id","order_code","province","city","county","address","tel","name","total","status"];
+  
+      public function shop(){
+          return $this->belongsTo(ShopInformation::class,'shop_id');
+      }
+      public function goods(){
+          return $this->hasMany(OrderDetail::class,"order_id");
+      }
+  
+  }
+  ```
+
+  ### 订单详情
+
+  ```php
+  //订单详情
+      public function detail(Request $request){
+          $order=Order::find($request->input('id'));
+          //构造状态数组
+          $stats=[0=>'代付款',1=>'待发货',2=>'待收货',3=>'待完成',-1=>'取消'];
+          $data['id']=$order->id;
+          $data['order_code']=$order->order_code;
+          $data['order_birth_time']=(string)$order->created_at;
+          $data['order_status']=$stats[$order->status];
+          $data['shop_id']=$order->shop_id;
+          $data['shop_name']=$order->shop->shop_name;
+          $data['shop_img']=$order->shop->shop_img;
+          $data['order_price']=$order->total;
+          $data['order_address']=$order->provence.$order->city.$order->area.$order->detail_address;
+          $data['goods_list']=$order->goods;
+         return $data;
+          //dd($data);
+  
+      }
+  ```
+
+  ### Models/OrderDetail.php
+
+  ```php
+  <?php
+  
+  namespace App\Models;
+  
+  use Illuminate\Database\Eloquent\Model;
+  
+  class OrderDetail extends Model
+  {
+      //
+      protected $fillable=["goods_id","order_id","amount","goods_name","goods_img","goods_price"];
+  }
+  
+  ```
 
 
 
+  ### 订单支付
 
+  ```php
+   //订单支付
+         public function pay(Request $request){
+          //得到订单
+             $order=Order::find($request->post("id"));
+             //得到用户
+             $member=Member::find($order->user_id);
+             //判断金钱是否足够
+             if ($order->total>$member->money){
+                 return [
+                   "status"=>"false",
+                   "message"=>"余额不足，请充值"
+                 ];
+             }
+             //足够
+             $member->money=$member->money-$order->total;
+             $member->save();
+             //更改订单状态
+             $order->status=1;
+             $order->save();
+             return [
+                 "status"=>"true",
+                 "message"=>"支付成功"
+             ];
+         }
+  ```
+
+  ### Models/Menu.php
+
+  ```php
+      public function getGoodsImgAttribute($value){
+          return env("ALIYUN_OSS_URL").$value;
+      }
+  ```
+
+  ### 订单列表
+
+  ```php
+   //订单
+      public function index(Request $request){
+          $orders=Order::where("user_id",$request->input("user_id"))->get();
+  
+  
+          //dd($orders);
+  
+        // $datas=[];
+          foreach ($orders as $order){
+              //查询当前订单货物
+              //$goods = OrderDetail::where('order_id',$order->id)->get();
+              //当前店铺
+             $shop = ShopInformation::where('id',$order->shop_id)->first();
+             // dd($order->shop_id);
+              $stats=[0=>'代付款',1=>'待发货',2=>'待收货',3=>'待完成',-1=>'取消'];
+              $data['id']=$order->id;
+              $data['name']=$order->name;
+              $data['order_code']=$order->order_code;
+              $data['order_birth_time']=(string)$order->created_at;
+              $data['order_status']=$stats[$order->status];
+              $data['shop_id']=$order->shop_id;
+              $data['shop_name']=$shop->shop_name;
+              $data['shop_img']=$shop->shop_img;
+              $data['order_price']=$order->total;
+              $data['order_address']=$order->province . $order->city . $order->county . $order->address;
+  
+              $data['goods_list']=$order->goods;
+              $x[]=$data;
+          }
+          //$data['goods_list'] = $order->goods;
+         // dd($data);
+          return  $x;
+          //dd( $data['goods_list']);
+      }
+  ```
+
+  # Day09
+
+  ### 开发任务
+
+  商户端
+
+  - 订单管理[订单列表,查看订单,取消订单,发货]
+
+  - 订单量统计[按日统计,按月统计,累计]（每日、每月、总计）
+
+  - 菜品销量统计[按日统计,按月统计,累计]（每日、每月、总计）
+
+    平台
+
+  - 订单量统计[按商家分别统计和整体统计]（每日、每月、总计）
+
+  - 菜品销量统计[按商家分别统计和整体统计]（每日、每月、总计）
+
+  - 会员管理[会员列表,查询会员,查看会员信息,禁用会员账号]
+
+  ### 实现步骤
+
+  ### 订单管理
+
+  ```php
+    //订单管理
+      public function index(){
+  //
+          $orders=Order::all();
+  
+          return view("shop.order.index",compact("orders"));
+      }
+  
+      //查看订单
+      public function check($id){
+          $lists = DB::table("orders")->where("id",$id)->get();
+          return view("shop.order.check",compact("lists"));
+      }
+  
+      //取消订单
+      public function status($id,$status){
+          $result=DB::table("orders")->where("id",$id)->update(["status"=>$status]);
+          if($result){
+              return redirect()->route("shop.order.index");
+          }
+      }
+  ```
+
+  ### 订单销量统计
+
+  ```php
+    //订单销量
+      public function order(){
+              $shopId=Auth::user()->information->id;
+  //        dd($shopId);
+              $data=Order::where("shop_id",$shopId)
+                  ->select(DB::raw("COUNT(*) as nums,SUM(total) as money"))
+                  ->get();
+              //显示视图
+              return view("shop.order.order",compact("data"));
+      }
+  
+      //按天统计
+      public function day(Request $request){
+          $shopId=Auth::user()->information->id;
+  //        dd($shopId);
+          $data=Order::where("shop_id",$shopId)
+              ->select(DB::raw("DATE_FORMAT(created_at,'%Y-%m-%d')
+                as date,COUNT(*) as nums,SUM(total) as money"))
+              ->groupBy("date")
+              ->get();
+  
+          //接收数据
+          $start=$request->input("start");
+          $end=$request->input("end");
+          //如果有起始时间
+          if ($start!==null){
+              $data->whereDate("create_at",">=",$start);
+          }
+          if ($end!==null){
+              $data->whereDate("create_at","<=",$end);
+          }
+          //显示视图
+          return view("shop.order.day",compact("data"));
+  
+      }
+  
+      //按月统计
+      public function month(Request $request){
+          $shopId=Auth::user()->information->id;
+  //        dd($shopId);
+          $data=Order::where("shop_id",$shopId)
+              ->select(DB::raw("DATE_FORMAT(created_at,'%Y-%m')
+                as date,COUNT(*) as nums,SUM(total) as money"))
+              ->groupBy("date")
+              ->get();
+  
+          //接收数据
+          $start=$request->input("start");
+          $end=$request->input("end");
+          //如果有起始时间
+          if ($start!==null){
+              $data->whereDate("create_at",">=",$start);
+          }
+          if ($end!==null){
+              $data->whereDate("create_at","<=",$end);
+          }
+          //显示视图
+          return view("shop.order.day",compact("data"));
+  
+      }
+  ```
+
+  ### 菜品销量统计
+
+  ```php
+   //菜品销量
+      public function menu(){
+      //找到当前店铺所有订单
+      $ids=Order::where("shop_id",Auth::user()->information->id)->pluck("id");
+      $data=OrderDetail::select(DB::raw('SUM(amount) as nums,SUM(goods_price) as money'))->whereIn("order_id",$ids)->get();
+      //显示视图
+      return view("shop.order.menu",compact("data"));
+  }
+  
+  //按天统计
+      public function day1(Request $request){
+          //找到当前店铺所有订单
+          $ids=Order::where("shop_id",Auth::user()->information->id)->pluck("id");
+  //        dd($shopId);
+          $data=OrderDetail::where("order_id",$ids)
+              ->select(DB::raw("DATE_FORMAT(created_at,'%Y-%m-%d')
+                as date,SUM(amount) as nums,SUM(goods_price) as money"))
+              ->groupBy("date")
+              ->get();
+  
+          //接收数据
+          $start=$request->input("start");
+          $end=$request->input("end");
+          //如果有起始时间
+          if ($start!==null){
+              $data->whereDate("create_at",">=",$start);
+          }
+          if ($end!==null){
+              $data->whereDate("create_at","<=",$end);
+          }
+          //显示视图
+          return view("shop.order.day1",compact("data"));
+  
+      }
+  
+  //按月统计
+      public function month1(Request $request){
+          //找到当前店铺所有订单
+          $ids=Order::where("shop_id",Auth::user()->information->id)->pluck("id");
+  //        dd($shopId);
+          $data=OrderDetail::where("order_id",$ids)
+              ->select(DB::raw("DATE_FORMAT(created_at,'%Y-%m')
+                as date,SUM(amount) as nums,SUM(goods_price) as money"))
+              ->groupBy("date")
+              ->get();
+  
+          //接收数据
+          $start=$request->input("start");
+          $end=$request->input("end");
+          //如果有起始时间
+          if ($start!==null){
+              $data->whereDate("create_at",">=",$start);
+          }
+          if ($end!==null){
+              $data->whereDate("create_at","<=",$end);
+          }
+          //显示视图
+          return view("shop.order.month1",compact("data"));
+  
+      }
+  ```
+
+  ## 平台
+
+  ### 按整体统计
+
+  ```php
+  class OrderController extends BaseController
+  {
+      //按整体分类
+      //订单销量
+      public function order(){
+          $data=Order::select(DB::raw("COUNT(*) as nums,SUM(total) as money"))->get();
+          //显示视图
+          return view("admin.order.order",compact("data"));
+      }
+  
+      //按天统计
+      public function day(Request $request){
+          $data=Order::select(DB::raw("DATE_FORMAT(created_at,'%Y-%m-%d')
+                as date,COUNT(*) as nums,SUM(total) as money"))
+              ->groupBy("date")
+              ->get();
+  
+          //接收数据
+          $start=$request->input("start");
+          $end=$request->input("end");
+          //如果有起始时间
+          if ($start!==null){
+              $data->whereDate("create_at",">=",$start);
+          }
+          if ($end!==null){
+              $data->whereDate("create_at","<=",$end);
+          }
+          //显示视图
+          return view("admin.order.day",compact("data"));
+  
+      }
+  
+      //按月统计
+      public function month(Request $request){
+          $data=Order::select(DB::raw("DATE_FORMAT(created_at,'%Y-%m')
+                as date,COUNT(*) as nums,SUM(total) as money"))
+              ->groupBy("date")
+              ->get();
+  
+          //接收数据
+          $start=$request->input("start");
+          $end=$request->input("end");
+          //如果有起始时间
+          if ($start!==null){
+              $data->whereDate("create_at",">=",$start);
+          }
+          if ($end!==null){
+              $data->whereDate("create_at","<=",$end);
+          }
+          //显示视图
+          return view("admin.order.day",compact("data"));
+  
+      }
+  ```
+
+  ### 按商家统计
+
+  ```php
+   //按商家分类 按月
+      public function shopmonth(){
+  
+          $data=Order::select(DB::raw("DATE_FORMAT(created_at,'%Y-%m-%d')
+                as date,COUNT(*) as nums,SUM(total) as money,shop_id"))
+              ->groupBy("shop_id","date")
+              ->get();
+          //显示视图
+          return view("admin.order.shopmonth",compact("data"));
+  
+      }
+  
+      //按天
+      public function shopday(){
+  
+          $data=Order::select(DB::raw("DATE_FORMAT(created_at,'%Y-%m')
+                as date,COUNT(*) as nums,SUM(total) as money,shop_id"))
+              ->groupBy("shop_id","date")
+              ->get();
+          //显示视图
+          return view("admin.order.shopday",compact("data"));
+  
+      }
+  
+      //总
+      public function shopall(){
+  
+          $data=Order::select(DB::raw("COUNT(*) as nums,SUM(total) as money,shop_id"))
+              ->groupBy("shop_id")
+              ->get();
+          //显示视图
+          return view("admin.order.shopall",compact("data"));
+  
+      }
+  ```
 
 
 

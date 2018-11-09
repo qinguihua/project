@@ -70,9 +70,9 @@ class ShopController extends Controller
             foreach ($cates as $k=>$cate){
                 $goods=$cate->menus;
 
-                foreach ($goods as $v=>$good){
-                    $goods[$v]->goods_img=env("ALIYUN_OSS_URL").$good->goods_img;
-                }
+//                foreach ($goods as $v=>$good){
+//                    $goods[$v]->goods_img=env("ALIYUN_OSS_URL").$good->goods_img;
+//                }
 
                 $cates[$k]->goods_list=$goods;
 

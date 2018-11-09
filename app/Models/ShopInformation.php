@@ -27,6 +27,10 @@ class ShopInformation extends Model
         return $this->hasOne(MenuCategory::class,"information_id");
     }
 
+    public function order(){
+        return $this->hasMany(Order::class,"shop_id");
+    }
+
 }
 
 

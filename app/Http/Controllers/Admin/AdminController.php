@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class AdminController extends BaseController
 {
@@ -71,14 +72,20 @@ class AdminController extends BaseController
             $data['password'] = bcrypt($data['password']);
 
             //将数据入库
-            if(Admin::create($data)){
-                //跳转
-                return redirect()->intended(route("admin.admin.index"))->with("success","添加成功");
-            }
+            $admin=Admin::create($data);
+
+             //给用户添加角色，角色同步
+             $admin->syncRoles($request->post("role"));
+
+
+             //跳转
+             return redirect()->intended(route("admin.admin.index"))->with("success","添加成功");
 
         }else{
+            //得到所有角色
+            $roles=Role::all();
             //显示视图
-            return view("admin.admin.add");
+            return view("admin.admin.add",compact("roles"));
         }
     }
 
@@ -123,20 +130,26 @@ class AdminController extends BaseController
     //修改
     public function edit(Request $request,$id){
         $admin=Admin::find($id);
+        $ro=$admin->getRoleNames()->toArray();
         if ($request->isMethod("post")){
 
             //接收数据
             $data=$request->post();
-
+            //密码加密
+            $data['password'] = bcrypt($data['password']);
             //将数据入库
             if($admin->update($data)){
+                //给用户添加角色
+                $admin->syncRoles($request->post("role"));
                 //跳转
                 return redirect()->intended(route("admin.admin.index"))->with("success","修改成功");
             }
 
         }else{
+            //得到所有的角色
+            $roles=Role::all();
             //显示视图
-            return view("admin.admin.edit",compact("admin"));
+            return view("admin.admin.edit",compact("admin","roles","ro"));
         }
     }
 

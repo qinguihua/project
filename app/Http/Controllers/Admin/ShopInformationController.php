@@ -68,6 +68,20 @@ class ShopInformationController extends BaseController
 //       dd($information);
         $information->status=1;
         $information->save();
+
+        $shopName=$information->user->name;
+
+        $to = $information->user->email;//收件人
+
+        $subject = $shopName.' 审核通知';//邮件标题
+        \Illuminate\Support\Facades\Mail::send(
+            'email.test',
+            compact("shopName"),
+            function ($message) use($to, $subject) {
+                $message->to($to)->subject($subject);
+            }
+        );
+
         return back()->with("success","通过审核");
     }
 

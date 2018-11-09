@@ -44,6 +44,7 @@
 
             <li class="header">活动</li>
             <li><a href="{{route('shop.user.show')}}"><i class="fa fa-circle-o text-red"></i> <span>查看活动</span></a></li>
+            <li><a href="{{route('shop.event.index')}}"><i class="fa fa-circle-o text-red"></i> <span>抽奖活动</span></a></li>
         </ul>
     </section>
     <!-- /.sidebar -->

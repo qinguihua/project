@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Address;
 use App\Models\Adress;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 
-class AdressController extends Controller
+class AddressController extends Controller
 {
     //
     public function index(Request $request){
         //得到当前用户ID
         $memberID=$request->input("user_id");
         //得到当前用户所有地址
-        $addresses=Adress::all();
+        $addresses=Address::all();
         //返回地址
         return $addresses;
     }
@@ -40,7 +41,7 @@ class AdressController extends Controller
 //        dd($data);
         $data["is_default"]=0;
         //数据入库
-        if (Adress::create($data)) {
+        if (Address::create($data)) {
             //返回数据
             $data= [
                 "status"=>"true",
@@ -52,7 +53,6 @@ class AdressController extends Controller
                 "message"=>"添加失败"
             ];
         }
-
+      return $data;
     }
-
 }
